@@ -1,4 +1,3 @@
-
 """
 """
 
@@ -16,15 +15,18 @@ class Engine(object):
     """ The core component of template engine.
     """
 
-    def __init__(self, loader, extensions, template_class=None):
+    def __init__(self, loader, extensions, global_vars=None, template_class=None):
         self.lock = allocate_lock()
         self.templates = {}
         self.renders = {}
         self.modules = {}
-        self.global_vars = {
+        if global_vars is None:
+            global_vars = {}
+        global_vars.update({
             '_r': self.render,
             '_i': self.import_name
-        }
+        })
+        self.global_vars = global_vars
         self.loader = loader
         self.template_class = template_class or Template
         self.compiler = Compiler(self.global_vars, -2)
@@ -65,12 +67,12 @@ class Engine(object):
 
     # region: internal details
 
-    def import_name(self, name):
+    def import_name(self, name, ctx, local_defs, super_defs):
         try:
-            return self.modules[name]
+            return self.modules[name](ctx, local_defs, super_defs)
         except KeyError:
             self.compile_import(name)
-            return self.modules[name]
+            return self.modules[name](ctx, local_defs, super_defs)
 
     def compile_template(self, name):
         self.lock.acquire(1)
@@ -106,8 +108,8 @@ class Engine(object):
 
                 # self.print_debug(name, tokens, nodes, source)
 
-                self.modules[name] = self.compiler.compile_module(
-                    source, name)
+                self.modules[name] = self.compiler.compile_source(
+                    source, name)['get_defs']
         finally:
             self.lock.release()
 

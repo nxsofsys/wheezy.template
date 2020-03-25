@@ -1,4 +1,3 @@
-
 """
 """
 
@@ -135,15 +134,24 @@ def build_extends(builder, lineno, token, nodes):
 def build_module(builder, lineno, token, nodes):
     assert token == 'module'
     for lineno, token, value in nodes:
-        if token == 'def ':
+        if token in ('def ', 'import ', 'require'):
             builder.build_token(lineno, token, value)
+    ln = builder.lineno
+    builder.add(ln + 1, 'class _DefsContainer(): pass')
+    builder.add(ln + 2, 'defs = _DefsContainer();defs.__dict__.update(super_defs)')
+    builder.add(ln + 3, 'return defs')
     return True
 
 
 def build_import(builder, lineno, token, value):
     assert token == 'import '
     name, var = value
-    builder.add(lineno, var + ' = _i(' + name + ')')
+    builder.add(lineno, var + ' = _i(' + name +
+                ', ctx, {}, {})')
+    builder.add(lineno + 1, var.join([
+        "super_defs['", "'] = ", "; ",
+        " = local_defs.setdefault('", "', ", ")"
+    ]))
     return True
 
 
@@ -151,7 +159,11 @@ def build_from(builder, lineno, token, value):
     assert token == 'from '
     name, var, alias = value
     builder.add(lineno, alias + ' = _i(' + name +
-                ').local_defs[\'' + var + '\']')
+                ', ctx, {}, {}).' + var)
+    builder.add(lineno + 1, alias.join([
+        "super_defs['", "'] = ", "; ",
+        " = local_defs.setdefault('", "', ", ")"
+    ]))
     return True
 
 

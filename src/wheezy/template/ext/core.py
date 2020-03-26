@@ -77,7 +77,8 @@ def configure_parser(parser):
 # region: parser
 
 def parse_require(value):
-    return [v.strip(' ') for v in value.rstrip()[8:-1].split(',')]
+    return [[x.strip(' ') for x in v.split(' as ', 1)]
+        for v in value.rstrip()[8:-1].split(',')]
 
 
 def parse_extends(value):
@@ -134,7 +135,7 @@ def build_extends(builder, lineno, token, nodes):
 def build_module(builder, lineno, token, nodes):
     assert token == 'module'
     for lineno, token, value in nodes:
-        if token in ('def ', 'import ', 'require'):
+        if token in ('def ', 'import ', 'require', 'code'):
             builder.build_token(lineno, token, value)
     ln = builder.lineno
     builder.add(ln + 1, 'class _DefsContainer(): pass')
@@ -325,7 +326,7 @@ def build_compound(builder, lineno, token, value):
 def build_require(builder, lineno, token, variables):
     assert token == 'require'
     builder.add(lineno, '; '.join([
-                name + " = ctx['" + name + "']" for name in variables]))
+                name[-1] + " = ctx['" + name[0] + "']" for name in variables]))
     return True
 
 

@@ -216,6 +216,11 @@ Add a line before it with @#ignore or leave it empty.
     @%s ...""" % (token, stmt, token)
         builder.add(lineno, 'raise SyntaxError(%s)' % repr(error))
         builder.end_block()
+        def_name = stmt[4:stmt.index('(', 5)]
+        builder.add(lineno + 1, def_name.join([
+            "super_defs['", "'] = ", "; ",
+            " = local_defs.setdefault('", "', ", ")"
+        ]))
         return True
     elif len(nodes) > 1:
         # token before @end
